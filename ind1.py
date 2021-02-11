@@ -1,15 +1,6 @@
 #!/usr/bin/env python3
-# -*- config: utf-8 -*-
+# -*- coding: utf-8 -*-
 
-# Вариант 13. Использовать словарь, содержащий следующие ключи: фамилия, имя; номер телефона;
-# дата рождения. Написать программу, выполняющую следующие
-# действия: ввод с клавиатуры данных в список, состоящий из словарей заданной структуры;
-# записи должны быть упорядочены по трем первым цифрам номера телефона; вывод на
-# экран информации о человеке, чья фамилия введена с клавиатуры; если такого нет, выдать
-# на дисплей соответствующее сообщение.
-
-# Выполнить индивидуальное задание 2 лабораторной работы 13, добавив возможность работы с
-# исключениями и логгирование.
 
 from dataclasses import dataclass, field
 import logging
@@ -18,15 +9,18 @@ from typing import List
 import xml.etree.ElementTree as ET
 
 
-class IllegalYearError(Exception):
+#   Выполнить индивидуальное задание 2 лабораторной работы 13, добавив возможность работы с
+#   исключениями и логгирование.
 
-    def __init__(self, year, message="Illegal year (ДД.ММ.ГГГГ)"):
-        self.year = year
+class IllegalTimeError(Exception):
+
+    def __init__(self, time, message="Illegal time (ЧЧ:ММ)"):
+        self.time = time
         self.message = message
-        super(IllegalYearError, self).__init__(message)
+        super(IllegalTimeError, self).__init__(message)
 
     def __str__(self):
-        return "{self.year} -> {self.message}"
+        return f"{self.time} -> {self.message}"
 
 
 class UnknownCommandError(Exception):
@@ -37,138 +31,129 @@ class UnknownCommandError(Exception):
         super(UnknownCommandError, self).__init__(message)
 
     def __str__(self):
-        return "{self.command} -> {self.message}"
+        return f"{self.command} -> {self.message}"
 
 
 @dataclass(frozen=True)
-class people:
-    surname: str
+class train:
     name: str
-    number: int
-    year: int
+    num: str
+    time: str
 
 
 @dataclass
 class Staff:
-    peoples: List[people] = field(default_factory=lambda: [])
+    trains: List[train] = field(default_factory=lambda: [])
 
-    def add(self, surname, name, number, year):
+    def add(self, name, num, time):
 
-        if "." not in year:
-            raise IllegalTimeError(year)
+        if ":" not in time:
+            raise IllegalTimeError(time)
 
-        self.peoples.append(
-            people(
-                surname=surname,
+        self.trains.append(
+            train(
                 name=name,
-                number=number,
-                year=year
+                num=num,
+                time=time
             )
         )
 
-        self.peoples.sort(key=lambda people: people.number)
+        self.trains.sort(key=lambda train: train.name)
 
     def __str__(self):
         table = []
-        line = '+-{}-+-{}-+-{}-+-{}-+-{}-+'.format(
+        line = '+-{}-+-{}-+-{}-+-{}-+'.format(
             '-' * 4,
+            '-' * 30,
             '-' * 20,
-            '-' * 20,
-            '-' * 20,
-            '-' * 15
+            '-' * 17
         )
         table.append(line)
         table.append(
-            '| {:^4} | {:^20} | {:^20} | {:^20} | {:^15} |'.format(
+            '| {:^4} | {:^30} | {:^20} | {:^17} |'.format(
                 "№",
-                "Фамилия ",
-                "Имя",
-                "Номер телефона",
-                "Дата рождения"
+                "Пункт назначения",
+                "Номер поезда",
+                "Время отправления"
             )
         )
         table.append(line)
 
-        for idx, people in enumerate(self.peoples, 1):
+        for idx, train in enumerate(self.trains, 1):
             table.append(
-                '| {:>4} | {:<20} | {:<20} | {:<20} | {:>15} |'.format(
+                '| {:>4} | {:<30} | {:<20} | {:>17} |'.format(
                     idx,
-                    people.surname,
-                    people.name,
-                    people.number,
-                    people.year
+                    train.name,
+                    train.num,
+                    train.time
                 )
             )
+
         table.append(line)
 
         return '\n'.join(table)
 
     def select(self):
+
         parts = command.split(' ', maxsplit=2)
-        sur = (parts[1])
 
-        count = 0
+        numbers = int(parts[1])
 
-        for people in self.peoples:
-            if people.get('surname') == sur:
-                count += 1
-                print('Фамилия:', people.surname)
-                print('Имя:', people.name)
-                print('Номер телефона:', people.number)
-                print('Дата рождения:', people.year)
+        c = 0
 
-        if count == 0:
-            print("Таких фамилий нет !")
+        for trainn in self.trains:
+            if trainn.num == numbers:
+                c += 1
+                print('Номер поезда:', trainn.num)
+                print('Пункт назначения:', trainn.name)
+                print('Время отправления(ЧЧ:ММ):', trainn.time)
+
+        if c == 0:
+            print("Таких поездов нет!")
 
     def load(self, filename):
         with open(filename, 'r', encoding='utf8') as fin:
             xml = fin.read()
         parser = ET.XMLParser(encoding="utf8")
         tree = ET.fromstring(xml, parser=parser)
-        self.peoples = []
+        self.trains = []
 
-        for people_element in tree:
-            surname, name, number, year = None, None, None, None
+        for train_element in tree:
+            name, num, time = None, None, None
 
-            for element in people_element:
-                if element.tag == 'surname':
-                    surname = element.text
-                elif element.tag == 'name':
+            for element in train_element:
+                if element.tag == 'name':
                     name = element.text
-                elif element.tag == 'number':
-                    number = element.text
-                elif element.tag == 'year':
-                    year = element.text
+                elif element.tag == 'num':
+                    num = element.text
+                elif element.tag == 'time':
+                    time = element.text
 
-                if surname is not None and name is not None \
-                        and number is not None and year is not None:
-                    self.peoples.append(
-                        people(
-                            suname=surname,
+                if name is not None and num is not None \
+                        and time is not None:
+                    self.trains.append(
+                        train(
                             name=name,
-                            number=number,
-                            year=year
+                            num=num,
+                            time=time
                         )
                     )
 
     def save(self, filename):
-        root = ET.Element('peoples')
-        for people in self.peoples:
-            people_element = ET.Element('people')
+        root = ET.Element('trains')
+        for train in self.trains:
+            train_element = ET.Element('train')
 
-            surname_element = ET.SubElement(people_element, 'surname')
-            surname_element.text = people.surname
+            name_element = ET.SubElement(train_element, 'name')
+            name_element.text = train.name
 
-            name_element = ET.SubElement(people_element, 'name')
-            name_element.text = people.name
+            num_element = ET.SubElement(train_element, 'num')
+            num_element.text = train.num
 
-            number_element = ET.SubElement(people_element, 'number')
-            number_element.text = str(people.number)
+            time_element = ET.SubElement(train_element, 'time')
+            time_element.text = str(train.time)
 
-            year_element = ET.SubElement(people_element, 'year')
-            year_element.text = str(people.year)
-
-            root.append(people_element)
+            root.append(train_element)
 
         tree = ET.ElementTree(root)
         with open(filename, 'wb') as fout:
@@ -178,11 +163,11 @@ class Staff:
 if __name__ == '__main__':
 
     logging.basicConfig(
-        filename='peoples.log',
+        filename='trains.log',
         level=logging.INFO
     )
 
-    peoples = []
+    trains = []
     staff = Staff()
     while True:
         try:
@@ -190,69 +175,68 @@ if __name__ == '__main__':
             if command == 'exit':
                 break
 
-
             elif command == 'add':
-                surname = input("Фамилия ")
-                name = input("Имя ")
-                number = int(input("Номер телефона "))
-                year = input("Дата рождения в формате: дд.мм.гггг ")
+                name = input("Название пункта назначения: ")
+                num = input("Номер поезда: ")
+                time = input("Время отправления: ")
 
-                staff.add(surname, name, number, year)
+                staff.add(name, num, time)
                 logging.info(
-                    "Добавлена фамилия: {surname}, "
-                    "Добавлено имя {name}, "
-                    "Добавлен номер телефона {number}, "
-                    "Добавлена дата рождения {year}. "
+                    f"Добавлен поезд: {num}, "
+                    f"пункт назначения {name}, "
+                    f"отправляющийся в {time} времени."
                 )
 
             elif command == 'list':
                 print(staff)
-                logging.info("Отображен список людей.")
+                logging.info("Отображен список поездов.")
 
             elif command.startswith('select '):
                 parts = command.split(' ', maxsplit=2)
 
-                sur = (parts[1])
+                numbers = int(parts[1])
 
-                count = 0
+                c = 0
 
-                for people in peoples:
-                    if people.get('surname') == sur:
-                        count += 1
-                        print('Фамилия:', people.surname)
-                        print('Имя:', people.name)
-                        print('Номер телефона:', people.number)
-                        print('Дата рождения:', people.year)
+                for trainn in trains:
+                    if trainn.num == numbers:
+                        c += 1
+                        print('Номер поезда:', trainn.num)
+                        print('Пункт назначения:', trainn.name)
+                        print('Время отправления:', trainn.time)
+                        logging.info(
+                            f"Найден поезд с номером {num} ."
+                        )
 
-                if count == 0:
-                    print("Таких фамилий нет !")
+                if c == 0:
+                    print("Таких поездов нет!")
                     logging.warning(
-                        "Человек с фамилией {surname} не найден."
+                        f"Поезд с номером {num} не найден."
                     )
 
             elif command.startswith('load '):
                 parts = command.split(' ', maxsplit=1)
                 staff.load(parts[1])
-                logging.info("Загружены данные из файла {parts[1]}.")
+                logging.info(f"Загружены данные из файла {parts[1]}.")
 
             elif command.startswith('save '):
+                # Разбить команду на части для выделения имени файла.
                 parts = command.split(' ', maxsplit=1)
                 staff.save(parts[1])
-                logging.info("Сохранены данные в файл {parts[1]}.")
+                logging.info(f"Сохранены данные в файл {parts[1]}.")
 
             elif command == 'help':
 
                 print("Список команд:\n")
-                print("add - добавить человека;")
-                print("list - вывести список людей;")
-                print("select <фамилия> - запросить информацию по фамилии;")
+                print("add - добавить поезд;")
+                print("list - вывести список поездов;")
+                print("select <номер поезда> - запросить информацию о выбранном поезде;")
                 print("help - отобразить справку;")
                 print("load <имя файла> - загрузить данные из файла;")
                 print("save <имя файла> - сохранить данные в файл;")
                 print("exit - завершить работу с программой.")
             else:
                 raise UnknownCommandError(command)
-
         except Exception as exc:
-            logging.error("Ошибка: {exc}")
+            logging.error(f"Ошибка: {exc}")
             print(exc, file=sys.stderr)
